@@ -16,11 +16,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return "";
     }
 
-    // 🧮 Funciones de cálculo
-
     function calcularISR(totalQ, isr) {
         const total = Number(totalQ.replace(/[^\d.-]/g, "")) || 0;
-        const isrNum = Number(isr); // convertir ISR a número
+        const isrNum = Number(isr);
         if (isrNum === 2 && total >= 2800) {
             return ((total / 1.12) * 0.05).toFixed(3);
         }
@@ -29,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function calcularRET(totalQ, isr) {
         const total = Number(totalQ.replace(/[^\d.-]/g, "")) || 0;
-        const isrNum = Number(isr); // convertir ISR a número
+        const isrNum = Number(isr);
         if (isrNum === 4 && total > 2500) {
             return (total * 0.05).toFixed(2);
         } else if ((isrNum === 2 || isrNum === 3) && total >= 2500) {
@@ -38,8 +36,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return "0.000";
     }
 
-
-
     const columnas = [
         "ARCHIVO", "FECHA DE EMISION", "MES", "AÑO", "CANTIDAD", "NIT EMISOR", "NOMBRE EMISOR",
         "TOTAL Q", "SERIE", "NUMERO DTE", "ISR", "B/S", "NIT RECEPTOR",
@@ -47,7 +43,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
 
     let registros = [];
-
     const headerRow = document.getElementById("headerRow");
     columnas.forEach(col => {
         const th = document.createElement("th");
@@ -76,41 +71,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (!items || items.length === 0) continue;
 
                     let mes = "", anio = "", cantidad = "1", nitEmisor = "", nombreEmisor = "", totalQ = "", serie = "", numeroDTE = "", isr = "";
-                    let bs = "", nitReceptor = "";
+                    let bs = "", nitReceptor = "", fechaEmision = "";
 
-                    // 📅 Buscar la fecha de emisión
-                    let fechaEmision = "";
                     const fechaMatch = fullText.match(/Fecha y hora de emision:\s*(\d{2})-([A-Za-z]{3})-(\d{4})/i);
                     if (fechaMatch) {
-                        const dia = fechaMatch[1];
-                        const mesTexto = fechaMatch[2].toLowerCase();
-                        const anio = fechaMatch[3];
-
-                        // Mapeo de meses abreviados a número
-                        const mesesCortos = {
-                            "ene": "01", "feb": "02", "mar": "03", "abr": "04",
-                            "may": "05", "jun": "06", "jul": "07", "ago": "08",
-                            "sep": "09", "oct": "10", "nov": "11", "dic": "12"
-                        };
-
-                        const mesNum = mesesCortos[mesTexto] || "";
-                        fechaEmision = `${dia}.${mesNum}.${anio}`; // 👈 formato final 01.05.2026
+                        const mesesCortos = { "ene": "01", "feb": "02", "mar": "03", "abr": "04", "may": "05", "jun": "06", "jul": "07", "ago": "08", "sep": "09", "oct": "10", "nov": "11", "dic": "12" };
+                        fechaEmision = `${fechaMatch[1]}.${mesesCortos[fechaMatch[2].toLowerCase()] || ""}.${fechaMatch[3]}`;
                     }
 
-
-
-                    // 🗓️ Mes y año
                     const descripcionMatch = fullText.match(/mes\s*(de)?\s*([A-Za-zÁÉÍÓÚáéíóú]+)[^\d]*(\d{4})/i);
                     if (descripcionMatch) {
-                        const mesTexto = descripcionMatch[2].toLowerCase().trim();
-                        mes = meses[mesTexto] || "";
+                        mes = meses[descripcionMatch[2].toLowerCase().trim()] || "";
                         anio = descripcionMatch[3];
                     }
 
-                    // 🔍 Recorrer items
                     for (let idx = 0; idx < items.length; idx++) {
                         const str = items[idx];
-
                         if (/Nit\s*Emisor/i.test(str)) {
                             nitEmisor = str.replace(/[^0-9]/g, "").trim();
                             for (let j = idx - 1; j >= 0; j--) {
@@ -120,7 +96,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                 }
                             }
                         }
-
                         if (/Total\s*\(Q\)/i.test(str)) {
                             for (let k = idx + 1; k < items.length; k++) {
                                 if (/[\d,]+\.\d{2}/.test(items[k])) {
@@ -129,30 +104,21 @@ document.addEventListener("DOMContentLoaded", () => {
                                 }
                             }
                         }
-
                         if (/Serie\s*:/i.test(str) && /DTE\s*:/i.test(str)) {
                             const serieMatch = str.match(/Serie\s*:\s*([A-Z0-9]+)/i);
                             const dteMatch = str.match(/DTE\s*:\s*([0-9]+)/i);
                             if (serieMatch) serie = serieMatch[1].trim();
                             if (dteMatch) numeroDTE = dteMatch[1].trim();
                         }
-
-                        // 🔢 NIT Receptor
                         const nitReceptorMatch = str.match(/NIT\s*Receptor\s*[:\-]?\s*(\d+)/i);
                         if (nitReceptorMatch) nitReceptor = nitReceptorMatch[1];
-
-                        // 🔍 B/S (valor exacto: Bien o Servicio)
                         const bsMatch = str.match(/\b(Bien|Servicio)\b/i);
                         if (bsMatch) bs = bsMatch[1].trim();
                     }
 
                     isr = mapISR(fullText);
-
-                    // 🧮 Calcular ISR y RET
-                    const calculoISR = calcularISR(totalQ, isr);
-                    const calculoRET = calcularRET(totalQ, isr);
-
                     const registro = {
+                        "fileObject": file, // 👈 Almacenamos el archivo para el evento de clic
                         "ARCHIVO": file.name.replace(/\.pdf$/i, ""),
                         "FECHA DE EMISION": fechaEmision,
                         "MES": mes,
@@ -166,33 +132,32 @@ document.addEventListener("DOMContentLoaded", () => {
                         "ISR": isr,
                         "B/S": bs,
                         "NIT RECEPTOR": nitReceptor,
-                        "CALCULO ISR": calculoISR,
-                        "CALCULO RET": calculoRET
+                        "CALCULO ISR": calcularISR(totalQ, isr),
+                        "CALCULO RET": calcularRET(totalQ, isr)
                     };
-
                     registros.push(registro);
                 }
 
-                // 🖥️ Mostrar registros en tabla con validación visual
                 tableBody.innerHTML = "";
                 registros.forEach(reg => {
                     const row = document.createElement("tr");
+                    // 👈 Estilos para indicar que es clickeable
+                    row.style.cursor = "pointer";
+                    row.title = "Clic para abrir el PDF";
+                    row.addEventListener("click", () => {
+                        const fileURL = URL.createObjectURL(reg.fileObject);
+                        window.open(fileURL, '_blank');
+                    });
+
                     columnas.forEach(col => {
                         const cell = document.createElement("td");
                         cell.textContent = reg[col] || "";
-
-                        // Validaciones visuales
                         if (col === "B/S" && reg[col].toLowerCase() !== "servicio") {
                             cell.style.backgroundColor = "#ffcccc";
-                            cell.style.color = "#b30000";
-                            cell.style.fontWeight = "bold";
                         }
                         if (col === "NIT RECEPTOR" && reg[col] !== "7545657") {
                             cell.style.backgroundColor = "#ffcccc";
-                            cell.style.color = "#b30000";
-                            cell.style.fontWeight = "bold";
                         }
-
                         row.appendChild(cell);
                     });
                     tableBody.appendChild(row);
@@ -202,45 +167,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // 📤 Exportar a Excel con alerta visual
     document.getElementById("exportExcel").addEventListener("click", () => {
-        let alerta = document.getElementById("alerta");
-        if (!alerta) {
-            alerta = document.createElement("div");
-            alerta.id = "alerta";
-            alerta.style.position = "fixed";
-            alerta.style.top = "20px";
-            alerta.style.right = "20px";
-            alerta.style.padding = "15px 25px";
-            alerta.style.borderRadius = "8px";
-            alerta.style.backgroundColor = "#ff4d4d";
-            alerta.style.color = "white";
-            alerta.style.fontWeight = "bold";
-            alerta.style.boxShadow = "0 4px 10px rgba(0,0,0,0.3)";
-            alerta.style.zIndex = "9999";
-            alerta.style.transition = "opacity 0.5s";
-            document.body.appendChild(alerta);
-        }
-
-        const errores = registros.filter(r => r["B/S"].toLowerCase() !== "servicio" || r["NIT RECEPTOR"] !== "7545657");
-        if (errores.length > 0) {
-            alerta.textContent = `⚠️ Hay ${errores.length} registros con errores en B/S o NIT Receptor`;
-            alerta.style.display = "block";
-            alerta.style.opacity = "1";
-            setTimeout(() => alerta.style.opacity = "0", 4000);
-        }
-
-        if (registros.length === 0) {
-            alert("Primero carga los PDFs");
-            return;
-        }
-
-        // Exportar todos los registros incluyendo CALCULO ISR y CALCULO RET
+        if (registros.length === 0) { alert("Primero carga los PDFs"); return; }
         const worksheet = XLSX.utils.json_to_sheet(registros);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Facturas");
-        const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-        const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-        saveAs(blob, "facturas_diarias.xlsx");
+        saveAs(new Blob([XLSX.write(workbook, { bookType: "xlsx", type: "array" })], { type: "application/octet-stream" }), "facturas_diarias.xlsx");
     });
 });
