@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const calculoRET = calcularRET(totalQ, isr);
   
             const registro = {
-              "ARCHIVO": file.name,  
+              "ARCHIVO": file.name.replace(/\.pdf$/i, ""),  
               "MES": mes,
               "AÑO": anio,
               "CANTIDAD": cantidad,
