@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
       
       
     const columnas = [
-      "MES","AÑO","CANTIDAD","NIT EMISOR","NOMBRE EMISOR",
+      "ARCHIVO","MES","AÑO","CANTIDAD","NIT EMISOR","NOMBRE EMISOR",
       "TOTAL Q","SERIE","NUMERO DTE","ISR","B/S","NIT RECEPTOR",
       "CALCULO ISR","CALCULO RET"
     ];
@@ -132,6 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const calculoRET = calcularRET(totalQ, isr);
   
             const registro = {
+              "ARCHIVO": file.name,  
               "MES": mes,
               "AÑO": anio,
               "CANTIDAD": cantidad,
