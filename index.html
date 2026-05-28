@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>PDF a Excel - Z Gas</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #f0f6f9;
+    }
+
+    #header {
+      display: flex;
+      align-items: center;
+      background-color: #004080;
+      color: white;
+      padding: 10px 20px;
+    }
+
+    #header img {
+      height: 50px;
+      margin-right: 15px;
+    }
+
+    #controls {
+      background-color: #e6f2ff;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 2px solid #004080;
+    }
+
+    #controls button {
+      background-color: #0073e6;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #controls button:hover {
+      background-color: #005bb5;
+    }
+
+    #pdfViewer {
+      height: 180px;
+      border-bottom: 1px solid #ccc;
+      overflow: auto;
+      background-color: #fafafa;
+    }
+
+    #dataTable {
+      flex: 1;
+      border-collapse: collapse;
+      width: 100%;
+      overflow: auto;
+      background-color: white;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    #dataTable th {
+      background-color: #004080;
+      color: white;
+      padding: 8px;
+      text-align: center;
+      font-weight: 600;
+      border: 1px solid #003366;
+    }
+
+    #dataTable td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    #dataTable tbody tr:nth-child(even) {
+      background-color: #f2f6fa;
+    }
+
+    #dataTable tbody tr:hover {
+      background-color: #e6f0ff;
+    }
+
+    footer {
+      background-color: #004080;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <img src="logo.png" alt="Z Gas Logo">
+    <h1>PDF a Excel - Z Gas CEFs</h1>
+  </div>
+
+  <div id="controls">
+    <input type="file" id="pdfFiles" accept="application/pdf" multiple />
+    <button id="exportExcel">Descargar Excel</button>
+  </div>
+
+  <div id="pdfViewer"></div>
+  <table id="dataTable">
+    <thead>
+      <tr id="headerRow"></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <script src="index.js"></script>
+
+  <footer>
+    Z Gas – PDF to EXCEL (CEFs) By Julio Cardoza.
+  </footer>
+</body>
+</html>
