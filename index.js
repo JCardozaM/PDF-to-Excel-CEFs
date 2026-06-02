@@ -8,6 +8,12 @@ document.addEventListener("DOMContentLoaded", () => {
         "septiembre": "09", "octubre": "10", "noviembre": "11", "diciembre": "12"
     };
 
+    // Función para extraer el código CEF
+    function extraerCEF(text) {
+        const match = text.match(/CEF\s+([A-Z0-9]{6})/i);
+        return match ? match[1] : "N/A";
+    }
+
     function mapISR(text) {
         if (/pago directo/i.test(text)) return 2;
         if (/pagos trimestrales/i.test(text)) return 3;
@@ -36,8 +42,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return "0.000";
     }
 
+    // 1. Agregamos "CEF" a las columnas
     const columnas = [
-        "ARCHIVO", "FECHA DE EMISION", "MES", "AÑO", "CANTIDAD", "NIT EMISOR", "NOMBRE EMISOR",
+        "ARCHIVO", "CEF", "FECHA DE EMISION", "MES", "AÑO", "CANTIDAD", "NIT EMISOR", "NOMBRE EMISOR",
         "TOTAL Q", "SERIE", "NUMERO DTE", "ISR", "B/S", "NIT RECEPTOR",
         "CALCULO ISR", "CALCULO RET"
     ];
@@ -73,6 +80,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     let mes = "", anio = "", cantidad = "1", nitEmisor = "", nombreEmisor = "", totalQ = "", serie = "", numeroDTE = "", isr = "";
                     let bs = "", nitReceptor = "", fechaEmision = "";
 
+                    // 2. Extraer el código CEF
+                    const cefCode = extraerCEF(fullText);
+
+                    // ... (resto de tu lógica de extracción de fechas, NITs, etc.) ...
                     const fechaMatch = fullText.match(/Fecha y hora de emision:\s*(\d{2})-([A-Za-z]{3})-(\d{4})/i);
                     if (fechaMatch) {
                         const mesesCortos = { "ene": "01", "feb": "02", "mar": "03", "abr": "04", "may": "05", "jun": "06", "jul": "07", "ago": "08", "sep": "09", "oct": "10", "nov": "11", "dic": "12" };
@@ -118,8 +129,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     isr = mapISR(fullText);
                     const registro = {
-                        "fileObject": file, // 👈 Almacenamos el archivo para el evento de clic
+                        "fileObject": file,
                         "ARCHIVO": file.name.replace(/\.pdf$/i, ""),
+                        "CEF": cefCode, // 👈 Nueva propiedad
                         "FECHA DE EMISION": fechaEmision,
                         "MES": mes,
                         "AÑO": anio,
@@ -141,7 +153,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 tableBody.innerHTML = "";
                 registros.forEach(reg => {
                     const row = document.createElement("tr");
-                    // 👈 Estilos para indicar que es clickeable
                     row.style.cursor = "pointer";
                     row.title = "Clic para abrir el PDF";
                     row.addEventListener("click", () => {
@@ -152,12 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     columnas.forEach(col => {
                         const cell = document.createElement("td");
                         cell.textContent = reg[col] || "";
-                        if (col === "B/S" && reg[col].toLowerCase() !== "servicio") {
-                            cell.style.backgroundColor = "#ffcccc";
-                        }
-                        if (col === "NIT RECEPTOR" && reg[col] !== "7545657") {
-                            cell.style.backgroundColor = "#ffcccc";
-                        }
+                        if (col === "B/S" && reg[col].toLowerCase() !== "servicio") cell.style.backgroundColor = "#ffcccc";
+                        if (col === "NIT RECEPTOR" && reg[col] !== "7545657") cell.style.backgroundColor = "#ffcccc";
                         row.appendChild(cell);
                     });
                     tableBody.appendChild(row);
@@ -169,7 +176,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("exportExcel").addEventListener("click", () => {
         if (registros.length === 0) { alert("Primero carga los PDFs"); return; }
-        const worksheet = XLSX.utils.json_to_sheet(registros);
+        // Excluimos fileObject antes de exportar
+        const dataExport = registros.map(({fileObject, ...rest}) => rest);
+        const worksheet = XLSX.utils.json_to_sheet(dataExport);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Facturas");
         saveAs(new Blob([XLSX.write(workbook, { bookType: "xlsx", type: "array" })], { type: "application/octet-stream" }), "facturas_diarias.xlsx");
