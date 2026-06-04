@@ -8,9 +8,9 @@ document.addEventListener("DOMContentLoaded", () => {
         "septiembre": "09", "octubre": "10", "noviembre": "11", "diciembre": "12"
     };
 
-    // Función para extraer el código CEF
     function extraerCEF(text) {
-        const match = text.match(/CEF\s+([A-Z0-9]{6})/i);
+        // Ajuste para mayor flexibilidad
+        const match = text.match(/CEF[\s\.]+\s*([A-Z0-9]{6})/i);
         return match ? match[1] : "N/A";
     }
 
@@ -25,27 +25,21 @@ document.addEventListener("DOMContentLoaded", () => {
     function calcularISR(totalQ, isr) {
         const total = Number(totalQ.replace(/[^\d.-]/g, "")) || 0;
         const isrNum = Number(isr);
-        if (isrNum === 2 && total >= 2800) {
-            return ((total / 1.12) * 0.05).toFixed(3);
-        }
-        return "0.000";
+        return (isrNum === 2 && total >= 2800) ? ((total / 1.12) * 0.05).toFixed(3) : "0.000";
     }
 
     function calcularRET(totalQ, isr) {
         const total = Number(totalQ.replace(/[^\d.-]/g, "")) || 0;
         const isrNum = Number(isr);
-        if (isrNum === 4 && total > 2500) {
-            return (total * 0.05).toFixed(2);
-        } else if ((isrNum === 2 || isrNum === 3) && total >= 2500) {
-            return ((total / 1.12) * 0.12 * 0.15).toFixed(3);
-        }
+        if (isrNum === 4 && total > 2500) return (total * 0.05).toFixed(2);
+        if ((isrNum === 2 || isrNum === 3) && total >= 2500) return ((total / 1.12) * 0.12 * 0.15).toFixed(3);
         return "0.000";
     }
 
-    // 1. Agregamos "CEF" a las columnas
+    // 1. Agregada la columna FECHA DE CERTIFICACION
     const columnas = [
-        "ARCHIVO", "CEF", "FECHA DE EMISION", "MES", "AÑO", "CANTIDAD", "NIT EMISOR", "NOMBRE EMISOR",
-        "TOTAL Q", "SERIE", "NUMERO DTE", "ISR", "B/S", "NIT RECEPTOR",
+        "ARCHIVO", "FECHA DE EMISION", "FECHA DE CERTIFICACION", "CANTIDAD", "B/S", "NIT RECEPTOR", 
+        "NIT EMISOR", "AÑO", "MES", "CEF", "NOMBRE EMISOR", "TOTAL Q", "SERIE", "NUMERO DTE", "REGIMEN",
         "CALCULO ISR", "CALCULO RET"
     ];
 
@@ -66,8 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
         for (const file of files) {
             const reader = new FileReader();
             reader.onload = async function () {
-                const typedArray = new Uint8Array(this.result);
-                const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
@@ -75,20 +68,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     const items = textContent.items.map(it => it.str);
                     const fullText = items.join(" ");
 
-                    if (!items || items.length === 0) continue;
-
                     let mes = "", anio = "", cantidad = "1", nitEmisor = "", nombreEmisor = "", totalQ = "", serie = "", numeroDTE = "", isr = "";
-                    let bs = "", nitReceptor = "", fechaEmision = "";
+                    let bs = "", nitReceptor = "", fechaEmision = "", fechaCert = "";
 
-                    // 2. Extraer el código CEF
                     const cefCode = extraerCEF(fullText);
 
-                    // ... (resto de tu lógica de extracción de fechas, NITs, etc.) ...
-                    const fechaMatch = fullText.match(/Fecha y hora de emision:\s*(\d{2})-([A-Za-z]{3})-(\d{4})/i);
-                    if (fechaMatch) {
-                        const mesesCortos = { "ene": "01", "feb": "02", "mar": "03", "abr": "04", "may": "05", "jun": "06", "jul": "07", "ago": "08", "sep": "09", "oct": "10", "nov": "11", "dic": "12" };
-                        fechaEmision = `${fechaMatch[1]}.${mesesCortos[fechaMatch[2].toLowerCase()] || ""}.${fechaMatch[3]}`;
-                    }
+                    // Lógica de fechas
+                    const mesesCortos = { "ene": "01", "feb": "02", "mar": "03", "abr": "04", "may": "05", "jun": "06", "jul": "07", "ago": "08", "sep": "09", "oct": "10", "nov": "11", "dic": "12" };
+                    
+                    const emisionMatch = fullText.match(/Fecha y hora de emision:\s*(\d{2})-([A-Za-z]{3})-(\d{4})/i);
+                    if (emisionMatch) fechaEmision = `${emisionMatch[1]}.${mesesCortos[emisionMatch[2].toLowerCase()] || ""}.${emisionMatch[3]}`;
+
+                    const certMatch = fullText.match(/Fecha y hora de certificación:\s*(\d{2})-([A-Za-z]{3})-(\d{4})/i);
+                    if (certMatch) fechaCert = `${certMatch[1]}.${mesesCortos[certMatch[2].toLowerCase()] || ""}.${certMatch[3]}`;
 
                     const descripcionMatch = fullText.match(/mes\s*(de)?\s*([A-Za-zÁÉÍÓÚáéíóú]+)[^\d]*(\d{4})/i);
                     if (descripcionMatch) {
@@ -96,23 +88,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         anio = descripcionMatch[3];
                     }
 
+                    // Extracción de otros datos
                     for (let idx = 0; idx < items.length; idx++) {
                         const str = items[idx];
                         if (/Nit\s*Emisor/i.test(str)) {
                             nitEmisor = str.replace(/[^0-9]/g, "").trim();
                             for (let j = idx - 1; j >= 0; j--) {
-                                if (/[A-ZÁÉÍÓÚÑ]/i.test(items[j]) && !/NÚMERO DE AUTORIZACIÓN/i.test(items[j])) {
-                                    nombreEmisor = items[j].trim();
-                                    break;
-                                }
+                                if (/[A-ZÁÉÍÓÚÑ]/i.test(items[j]) && !/NÚMERO DE AUTORIZACIÓN/i.test(items[j])) { nombreEmisor = items[j].trim(); break; }
                             }
                         }
                         if (/Total\s*\(Q\)/i.test(str)) {
                             for (let k = idx + 1; k < items.length; k++) {
-                                if (/[\d,]+\.\d{2}/.test(items[k])) {
-                                    totalQ = items[k].trim();
-                                    break;
-                                }
+                                if (/[\d,]+\.\d{2}/.test(items[k])) { totalQ = items[k].trim(); break; }
                             }
                         }
                         if (/Serie\s*:/i.test(str) && /DTE\s*:/i.test(str)) {
@@ -131,19 +118,20 @@ document.addEventListener("DOMContentLoaded", () => {
                     const registro = {
                         "fileObject": file,
                         "ARCHIVO": file.name.replace(/\.pdf$/i, ""),
-                        "CEF": cefCode, // 👈 Nueva propiedad
                         "FECHA DE EMISION": fechaEmision,
-                        "MES": mes,
-                        "AÑO": anio,
+                        "FECHA DE CERTIFICACION": fechaCert,
                         "CANTIDAD": cantidad,
+                        "B/S": bs,
+                        "NIT RECEPTOR": nitReceptor,
                         "NIT EMISOR": nitEmisor,
+                        "AÑO": anio,
+                        "MES": mes,
+                        "CEF": cefCode,
                         "NOMBRE EMISOR": nombreEmisor,
                         "TOTAL Q": totalQ,
                         "SERIE": serie,
                         "NUMERO DTE": numeroDTE,
-                        "ISR": isr,
-                        "B/S": bs,
-                        "NIT RECEPTOR": nitReceptor,
+                        "REGIMEN": isr,
                         "CALCULO ISR": calcularISR(totalQ, isr),
                         "CALCULO RET": calcularRET(totalQ, isr)
                     };
@@ -163,8 +151,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     columnas.forEach(col => {
                         const cell = document.createElement("td");
                         cell.textContent = reg[col] || "";
-                        if (col === "B/S" && reg[col].toLowerCase() !== "servicio") cell.style.backgroundColor = "#ffcccc";
-                        if (col === "NIT RECEPTOR" && reg[col] !== "7545657") cell.style.backgroundColor = "#ffcccc";
+                        if ((col === "B/S" && reg[col].toLowerCase() !== "servicio") || (col === "NIT RECEPTOR" && reg[col] !== "7545657")) {
+                            cell.style.backgroundColor = "#ffcccc";
+                        }
                         row.appendChild(cell);
                     });
                     tableBody.appendChild(row);
@@ -176,7 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("exportExcel").addEventListener("click", () => {
         if (registros.length === 0) { alert("Primero carga los PDFs"); return; }
-        // Excluimos fileObject antes de exportar
         const dataExport = registros.map(({fileObject, ...rest}) => rest);
         const worksheet = XLSX.utils.json_to_sheet(dataExport);
         const workbook = XLSX.utils.book_new();
